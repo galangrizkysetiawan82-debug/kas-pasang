@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KAS PASANG86</title>
+  <style>
+    /* ====== Reset & variables ====== */
+    :root{
+      --bg:#0f1724; /* dark navy */
+      --card:#0b1220;
+      --glass: rgba(255,255,255,0.04);
+      --accent:#6ee7b7;
+      --accent-2:#60a5fa;
+      --muted:rgba(255,255,255,0.6);
+      --success:#10b981;
+      --danger:#ef4444;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(96,165,250,0.06), transparent),
+                  radial-gradient(900px 400px at 90% 90%, rgba(110,231,183,0.03), transparent),
+                  var(--bg);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Container */
+    .wrap{max-width:1100px;margin:36px auto;padding:28px}
+
+    /* Header */
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#052024}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    /* Card */
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:14px;padding:18px;box-shadow:0 6px 24px rgba(2,6,23,0.6);backdrop-filter: blur(6px);border:1px solid rgba(255,255,255,0.03)}
+
+    /* Layout */
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+
+    /* Balance box */
+    .balance{display:flex;flex-direction:column;gap:10px}
+    .balance-top{display:flex;align-items:center;justify-content:space-between}
+    .amount{font-size:32px;font-weight:700}
+    .small{font-size:12px;color:var(--muted)}
+
+    /* Form */
+    form.row{display:flex;gap:10px;align-items:center}
+    input,select,button,textarea{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;color:inherit;font-size:14px}
+    input::placeholder{color:rgba(255,255,255,0.45)}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#042025;padding:10px 14px;font-weight:700;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px 8px;text-align:left;font-size:13px;border-bottom:1px dashed rgba(255,255,255,0.03)}
+    th{color:var(--muted);font-weight:600}
+    .in{color:var(--success);font-weight:700}
+    .out{color:var(--danger);font-weight:700}
+
+    /* Right column */
+    .right{display:flex;flex-direction:column;gap:12px}
+    .quick{display:flex;gap:8px}
+    .chip{padding:8px 10px;border-radius:999px;background:var(--glass);font-weight:600;font-size:13px}
+
+    /* Login modal */
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(2,6,23,0.6),rgba(2,6,23,0.8))}
+    .modal{width:420px}
+    .logo-sm{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#052024;font-weight:800}
+
+    /* responsive */
+    @media(max-width:920px){.grid{grid-template-columns:1fr;}.wrap{padding:14px;margin:18px auto}}
+
+    /* micro animations */
+    .fadeup{animation:fadeUp .5s ease both}
+    @keyframes fadeUp{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+    .hint{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">PN</div>
+        <div>
+          <h1>KAS PASANG86</h1>
+          <p class="lead">Kelola pemasukan & pengeluaran organisasi — sederhana & cepat</p>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="ghost" id="btn-logout" style="display:none">Logout</button>
+      </div>
+    </header>
+
+    <main class="card grid fadeup" id="app" aria-hidden="true">
+      <!-- LEFT: main ledger -->
+      <section>
+        <div class="balance">
+          <div class="balance-top">
+            <div>
+              <div class="small">Saldo Saat Ini</div>
+              <div class="amount" id="balance">Rp 0</div>
+            </div>
+            <div class="small">Total Transaksi: <span id="tx-count">0</span></div>
+          </div>
+
+          <div class="card" style="padding:12px;margin-top:12px">
+            <form id="tx-form" class="row" onsubmit="return false">
+              <input type="text" id="desc" placeholder="Keterangan (misal: iuran, konsumsi)" required style="flex:1">
+              <select id="type" style="width:120px">
+                <option value="in">Pemasukan</option>
+                <option value="out">Pengeluaran</option>
+              </select>
+              <input type="number" id="amount" placeholder="Jumlah (Rp)" required style="width:140px">
+              <button class="primary" id="add-btn">Tambah</button>
+            </form>
+            <div class="hint" style="margin-top:8px">Catatan: data disimpan di browser (localStorage). Untuk keamanan sesuaikan pada server jika perlu.</div>
+          </div>
+
+          <div class="card" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>Transaksi Terakhir</strong>
+              <div>
+                <button class="ghost" id="export-csv">Ekspor CSV</button>
+                <button class="ghost" id="clear-all">Hapus Semua</button>
+              </div>
+            </div>
+
+            <table id="tx-table">
+              <thead>
+                <tr><th>#</th><th>Keterangan</th><th>Tipe</th><th>Jumlah</th><th>Tanggal</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: controls -->
+      <aside class="right">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>Ringkasan</strong>
+              <div class="small">Periode: semua data</div>
+            </div>
+            <div class="chip" id="current-user">Admin</div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between"><div class="small">Total Pemasukan</div><div id="total-in">Rp 0</div></div>
+            <div style="display:flex;justify-content:space-between"><div class="small">Total Pengeluaran</div><div id="total-out">Rp 0</div></div>
+            <div style="display:flex;justify-content:space-between"><div class="small">Saldo</div><div id="summary-balance">Rp 0</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <strong>Aksi Cepat</strong>
+          <div class="quick" style="margin-top:10px">
+            <button class="chip" data-quick="iuran">Iuran</button>
+            <button class="chip" data-quick="donasi">Donasi</button>
+            <button class="chip" data-quick="konsumsi">Konsumsi</button>
+            <button class="chip" data-quick="alat">Peralatan</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <strong>Pengaturan Akun</strong>
+          <form id="acc-form" style="display:flex;flex-direction:column;gap:8px;margin-top:10px" onsubmit="return false">
+            <input id="username" placeholder="Username" required value="admin">
+            <input id="password" placeholder="Password baru (kosongkan jika tidak ganti)" type="password">
+            <div style="display:flex;gap:8px">
+              <button class="primary" id="save-acc">Simpan</button>
+              <button class="ghost" id="reset-pass" type="button">Reset ke default</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card hint" style="font-size:12px">Tips: Gunakan tombol 'Ekspor CSV' untuk mencadangkan data. Mode ini cocok untuk organisasi kecil; bila organisasi besar, gunakan server/DB.</div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="login-overlay" class="overlay">
+    <div class="modal card" style="padding:18px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="logo-sm">PN</div>
+        <div>
+          <div style="font-weight:700">Masuk ke KAS PASANG86</div>
+          <div class="small">Masukkan username & password</div>
+        </div>
+      </div>
+
+      <form id="login-form" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px">
+        <input id="login-username" placeholder="Username" required value="admin">
+        <input id="login-password" placeholder="Password" type="password" required>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="ghost" id="login-demo" type="button">Demo</button>
+          <button class="primary" id="login-btn">Login</button>
+        </div>
+        <div class="hint">Default: <strong>admin</strong> / <strong>admin123</strong></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ===== storage keys & default credentials (client-side demo only) =====
+    const KEY_TX = 'ko_tx_v1';
+    const KEY_USER = 'ko_user_v1';
+
+    const defaultUser = { username:'admin', password:'admin123' };
+
+    // ===== helpers =====
+    const $ = id => document.getElementById(id);
+    const qs = sel => document.querySelector(sel);
+
+    function fmtRp(n){
+      const x = Number(n)||0;
+      return 'Rp ' + x.toLocaleString('id-ID');
+    }
+
+    function nowDate(){
+      return new Date().toLocaleString('id-ID');
+    }
+
+    // ===== load/save =====
+    function loadTx(){
+      try{ return JSON.parse(localStorage.getItem(KEY_TX) || '[]'); }catch(e){return[]} 
+    }
+    function saveTx(arr){ localStorage.setItem(KEY_TX, JSON.stringify(arr)); }
+
+    function loadUser(){
+      try{ return JSON.parse(localStorage.getItem(KEY_USER)) || defaultUser }catch(e){return defaultUser}
+    }
+    function saveUser(u){ localStorage.setItem(KEY_USER, JSON.stringify(u)); }
+
+    // ===== render =====
+    function render(){
+      const tx = loadTx();
+      const tbody = qs('#tx-table tbody'); tbody.innerHTML='';
+      let totalIn=0, totalOut=0;
+      tx.slice().reverse().forEach((t,i)=>{
+        const idx = tx.length - i;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx}</td><td>${escapeHtml(t.desc)}</td><td>${t.type==='in'?'<span class="in">Pemasukan</span>':'<span class="out">Pengeluaran</span>'}</td><td>${fmtRp(t.amount)}</td><td>${t.date}</td><td><button class="ghost" data-del="${t.id}">Hapus</button></td>`;
+        tbody.appendChild(tr);
+        if(t.type==='in') totalIn += Number(t.amount);
+        else totalOut += Number(t.amount);
+      });
+
+      const balance = totalIn - totalOut;
+      $('balance').textContent = fmtRp(balance);
+      $('summary-balance').textContent = fmtRp(balance);
+      $('total-in').textContent = fmtRp(totalIn);
+      $('total-out').textContent = fmtRp(totalOut);
+      $('tx-count').textContent = tx.length;
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[c]) ); }
+
+    // ===== actions =====
+    function addTx(desc,type,amount){
+      const arr = loadTx();
+      arr.push({ id:Date.now()+Math.floor(Math.random()*9999), desc, type, amount:Number(amount), date:nowDate() });
+      saveTx(arr); render();
+    }
+
+    function deleteTx(id){
+      let arr = loadTx(); arr = arr.filter(t=>t.id!=id); saveTx(arr); render();
+    }
+
+    function clearAll(){ if(confirm('Hapus semua transaksi?')){ localStorage.removeItem(KEY_TX); render(); } }
+
+    function exportCSV(){
+      const arr = loadTx();
+      if(arr.length===0){ alert('Tidak ada data.'); return; }
+      const rows = [['id','keterangan','tipe','jumlah','tanggal']];
+      arr.forEach(r=>rows.push([r.id, r.desc, r.type, r.amount, r.date]));
+      const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'kas_organisasi.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // ===== account/login =====
+    function showApp(){ $('app').removeAttribute('aria-hidden'); $('login-overlay').style.display='none'; $('btn-logout').style.display='inline-block'; }
+    function showLogin(){ $('app').setAttribute('aria-hidden','true'); $('login-overlay').style.display='flex'; $('btn-logout').style.display='none'; }
+
+    function attemptLogin(u,p){
+      const stored = loadUser();
+      return stored.username===u && stored.password===p;
+    }
+
+    // ===== events =====
+    document.addEventListener('click', e=>{
+      if(e.target.dataset.del){ deleteTx(e.target.dataset.del); }
+      if(e.target.id==='clear-all'){ clearAll(); }
+      if(e.target.id==='export-csv'){ exportCSV(); }
+      if(e.target.id==='login-demo'){ $('login-username').value = 'admin'; $('login-password').value = 'admin123'; }
+    });
+
+    // form submit add
+    $('add-btn').addEventListener('click', ()=>{
+      const d = $('desc').value.trim(); const t = $('type').value; const a = Number($('amount').value);
+      if(!d || !a){ alert('Keterangan dan jumlah wajib diisi'); return; }
+      addTx(d,t,a);
+      $('desc').value=''; $('amount').value='';
+    });
+
+    // quick buttons
+    document.querySelectorAll('[data-quick]').forEach(b=>b.addEventListener('click', ()=>{
+      const q = b.dataset.quick; $('desc').value = q; $('type').value='in'; $('amount').focus();
+    }));
+
+    // export & clear handlers
+    $('export-csv').addEventListener('click', exportCSV);
+    $('clear-all').addEventListener('click', clearAll);
+
+    // delete from table handled in delegated click listener
+
+    // account save
+    $('save-acc').addEventListener('click', ()=>{
+      const u = $('username').value.trim(); const p = $('password').value;
+      if(!u){ alert('Username tidak boleh kosong'); return; }
+      const stored = loadUser();
+      const newUser = { username:u, password: p? p : stored.password };
+      saveUser(newUser);
+      alert('Akun tersimpan. Logout lalu login kembali jika ingin menggunakan username baru.');
+    });
+
+    $('reset-pass').addEventListener('click', ()=>{
+      if(!confirm('Kembalikan username & password ke default?')) return;
+      saveUser(defaultUser); alert('Sudah direset ke default.');
+    });
+
+    // login form
+    $('login-btn').addEventListener('click', ()=>{
+      const u = $('login-username').value.trim(); const p = $('login-password').value;
+      if(attemptLogin(u,p)){
+        $('current-user').textContent = u;
+        showApp(); render();
+      } else alert('Username atau password salah.');
+    });
+
+    $('btn-logout').addEventListener('click', ()=>{ showLogin(); });
+
+    // init
+    (function init(){
+      // ensure user exists
+      const u = loadUser(); if(!u.username) saveUser(defaultUser);
+      // show login
+      showLogin();
+      render();
+    })();
+  </script>
+</body>
+</html>
+
+
